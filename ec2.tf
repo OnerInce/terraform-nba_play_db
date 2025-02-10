@@ -16,8 +16,8 @@ locals {
     sed -i 's/enabled: true/enabled: false/g' /etc/elasticsearch/elasticsearch.yml
     sed -i 's/xpack.security.enabled: false/xpack.security.enabled: true/g' /etc/elasticsearch/elasticsearch.yml
 
-    aws s3 cp s3://${var.stack}/nginx/ssl-certs/ /etc/elasticsearch/certs/elastic.nbaplaydb.com/ --recursive
-    aws s3 cp s3://${var.stack}/nginx/elastic.nbaplaydb.com.conf /etc/nginx/conf.d/elastic.nbaplaydb.com.conf
+    aws s3 cp s3://nba-event-db/nginx/ssl-certs/ /etc/elasticsearch/certs/elastic.nbaplaydb.com/ --recursive
+    aws s3 cp s3://nba-event-db/nginx/elastic.nbaplaydb.com.conf /etc/nginx/conf.d/elastic.nbaplaydb.com.conf
 
     mkdir -p /etc/letsencrypt/
     curl https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf --output /etc/letsencrypt/options-ssl-nginx.conf
@@ -141,30 +141,3 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
-resource "aws_eip" "elastic_ip" {
-  instance = module.ec2_instance.id
-  domain   = "vpc"
-}
-
-module "ec2_instance" {
-  source  = "terraform-aws-modules/ec2-instance/aws"
-  version = "~> 5.2.1"
-
-  name = var.db_container_name
-  ami  = data.aws_ami.amazon_linux_2.id
-
-  instance_type               = "t4g.small"
-  monitoring                  = true
-  vpc_security_group_ids      = [module.elastic_ec2_sg.security_group_id]
-  subnet_id                   = element(module.vpc.public_subnets, 0)
-  associate_public_ip_address = true
-
-  create_iam_instance_profile = true
-  iam_role_description        = "IAM role for EC2 instance"
-  iam_role_policies = {
-    AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-  }
-
-  user_data_base64            = base64encode(local.user_data_elastic)
-  user_data_replace_on_change = true
-}

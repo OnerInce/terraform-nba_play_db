@@ -9,7 +9,7 @@ terraform {
   }
 
   backend "s3" {
-    bucket = "nbaplaydb"
+    bucket = "tf-state-nbaplaydb"
     key    = "terraform"
     region = "eu-west-1"
   }
